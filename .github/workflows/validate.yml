@@ -1,0 +1,77 @@
+# ============================================================
+# GitHub Actions — Validação automática dos pipelines
+# Roda em todo push e pull request para a branch main
+# ============================================================
+name: Validate Pipelines
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências de validação
+        run: |
+          pip install snakemake pyyaml
+
+      - name: Validar sintaxe dos Snakefiles
+        run: |
+          echo "=== Verificando sintaxe Python/Snakemake ==="
+          find pipelines/ -name "Snakefile" -o -name "*.smk" | while read f; do
+            echo "  Verificando: $f"
+            python3 -c "
+          import ast, sys
+          try:
+              with open('$f') as fh:
+                  src = fh.read()
+              # Remove diretivas Snakemake antes de parsear como Python
+              import re
+              src = re.sub(r'^(configfile|include|rule|checkpoint).*', '# smk', src, flags=re.MULTILINE)
+              ast.parse(src)
+              print('    ok')
+          except SyntaxError as e:
+              print(f'    ERRO: {e}')
+              sys.exit(1)
+          "
+          done
+
+      - name: Validar configs YAML
+        run: |
+          echo "=== Verificando configs YAML ==="
+          find templates/ -name "*.yaml" | while read f; do
+            echo "  Verificando: $f"
+            python3 -c "
+          import yaml, sys
+          try:
+              yaml.safe_load(open('$f'))
+              print('    ok')
+          except yaml.YAMLError as e:
+              print(f'    ERRO: {e}')
+              sys.exit(1)
+          "
+          done
+
+      - name: Verificar scripts shell
+        run: |
+          echo "=== Verificando scripts shell ==="
+          sudo apt-get install -y shellcheck -q
+          find scripts/ -name "*.sh" | while read f; do
+            echo "  Verificando: $f"
+            shellcheck "$f" && echo "    ok" || echo "    avisos em $f"
+          done
+
+      - name: Resumo
+        run: echo "Validação concluída com sucesso."

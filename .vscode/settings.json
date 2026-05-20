@@ -1,0 +1,51 @@
+{
+    "python.defaultInterpreterPath": "~/miniforge3/bin/python",
+    "python.terminal.activateEnvironment": true,
+
+    "[snakemake]": { "editor.formatOnSave": false },
+
+    "r.rterm.linux": "/usr/bin/Rscript",
+    "r.bracketedPaste": true,
+    "r.sessionWatcher": true,
+
+    "editor.rulers": [100],
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.renderWhitespace": "boundary",
+    "editor.wordWrap": "on",
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+
+    "git.autofetch": true,
+    "git.confirmSync": false,
+    "git.enableSmartCommit": true,
+    "gitlens.currentLine.enabled": true,
+
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.profiles.linux": {
+        "bash": { "path": "/bin/bash", "args": ["--login"], "icon": "terminal-bash" }
+    },
+    "terminal.integrated.fontSize": 13,
+
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/.snakemake": true,
+        "**/software/envs": true,
+        "**/software/containers": true
+    },
+    "search.exclude": {
+        "**/software/envs": true,
+        "**/software/containers": true,
+        "**/.snakemake": true
+    },
+
+    "yaml.schemas": {
+        "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml"
+    },
+
+    "workbench.colorTheme": "Default Dark Modern",
+    "workbench.iconTheme": "material-icon-theme",
+    "editor.fontFamily": "'JetBrains Mono', 'Fira Code', monospace",
+    "editor.fontLigatures": true,
+    "editor.fontSize": 13
+}

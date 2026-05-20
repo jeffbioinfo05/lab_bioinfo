@@ -1,0 +1,18 @@
+{
+    "recommendations": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "snakemake.snakemake-lang",
+        "reditorsupport.r",
+        "ms-vscode-remote.remote-ssh",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+        "redhat.vscode-yaml",
+        "ms-toolsai.jupyter",
+        "pkief.material-icon-theme",
+        "usernamehw.errorlens",
+        "streetsidesoftware.code-spell-checker",
+        "streetsidesoftware.code-spell-checker-portuguese-brazilian"
+    ]
+}

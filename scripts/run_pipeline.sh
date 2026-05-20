@@ -1,18 +1,11 @@
 #!/bin/bash
-# Executa o pipeline do projeto no diretório atual.
-# Lê pipeline_type de config.yaml e chama o Snakefile correto.
-# Uso: run_pipeline.sh [flags extras do snakemake]
-# Exemplos:
-#   run_pipeline.sh
-#   run_pipeline.sh --dry-run
-#   run_pipeline.sh --cores 16
-#   run_pipeline.sh --rerun-incomplete
+# run_pipeline.sh — v2 (com notificação e report automático)
+# Uso: run_pipeline.sh [flags extras snakemake]
 
 set -e
 
 if [ ! -f "config.yaml" ]; then
-    echo "ERRO: config.yaml não encontrado."
-    echo "Execute este script a partir do diretório do projeto."
+    echo "ERRO: config.yaml não encontrado. Execute no diretório do projeto."
     exit 1
 fi
 
@@ -21,22 +14,53 @@ PROJECT_NAME=$(python3  -c "import yaml; c=yaml.safe_load(open('config.yaml')); 
 SNAKEFILE="$HOME/lab/pipelines/$PIPELINE_TYPE/Snakefile"
 
 if [ ! -f "$SNAKEFILE" ]; then
-    echo "ERRO: Pipeline '$PIPELINE_TYPE' não encontrado."
-    echo "Esperado em: $SNAKEFILE"
-    echo "Pipelines disponíveis:"
-    ls "$HOME/lab/pipelines/"
+    echo "ERRO: Pipeline '$PIPELINE_TYPE' não encontrado em $SNAKEFILE"
     exit 1
 fi
 
 echo "========================================"
 echo "Pipeline : $PIPELINE_TYPE"
 echo "Projeto  : $PROJECT_NAME"
-echo "Snakefile: $SNAKEFILE"
+echo "Início   : $(date '+%Y-%m-%d %H:%M:%S')"
 echo "========================================"
-echo ""
 
+START_TIME=$(date +%s)
+
+# Executa o pipeline
+STATUS="sucesso"
 snakemake \
     --snakefile "$SNAKEFILE" \
     --configfile config.yaml \
-    --profile "$HOME/lab/profiles/default" \
-    "$@"
+    --profile    "$HOME/lab/profiles/default" \
+    "$@" || STATUS="falhou"
+
+END_TIME=$(date +%s)
+ELAPSED=$(( (END_TIME - START_TIME) / 60 ))
+
+echo ""
+echo "========================================"
+echo "Status   : $STATUS"
+echo "Duração  : ${ELAPSED} minutos"
+echo "========================================"
+
+# Gera relatório HTML do Snakemake (exceto em dry-run)
+if [[ ! " $* " =~ " --dry-run " ]] && [[ ! " $* " =~ " -n " ]]; then
+    snakemake \
+        --snakefile "$SNAKEFILE" \
+        --configfile config.yaml \
+        --report results/snakemake_report.html \
+        2>/dev/null && echo "Relatório: results/snakemake_report.html" || true
+fi
+
+# Notificação
+notify.sh "$PIPELINE_TYPE" "$STATUS" "$PROJECT_NAME"
+
+# Commita estado final dos configs no git do projeto
+if [ "$STATUS" = "sucesso" ]; then
+    git add config.yaml samples.csv 2>/dev/null || true
+    git commit -m "Pipeline concluído: $PIPELINE_TYPE — $(date '+%Y-%m-%d')" \
+        --quiet 2>/dev/null || true
+fi
+
+[ "$STATUS" = "falhou" ] && exit 1
+exit 0
