@@ -1,0 +1,13 @@
+# Perfil padrão do Snakemake
+# Sobreponha qualquer chave passando flags na linha de comando
+cores:                    4
+use-conda:                true
+use-singularity:          true
+conda-prefix:             ~/lab/software/envs
+singularity-prefix:       ~/lab/software/containers
+singularity-args:         "--bind /mnt/bioinfo"
+printshellcmds:           true
+rerun-incomplete:         true
+keep-going:               false
+latency-wait:             30
+show-failed-logs:         true

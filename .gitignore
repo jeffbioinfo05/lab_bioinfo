@@ -1,0 +1,5 @@
+# Não versionar ambientes conda nem containers (são grandes e recriáveis)
+software/envs/
+software/containers/
+# Não versionar projetos (cada um tem seu próprio repo)
+projects/
