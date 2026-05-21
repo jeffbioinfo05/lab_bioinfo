@@ -1,8 +1,8 @@
 # Mesmas rules de QC do pipeline prokaryote
-rule fastqc_raw:
+rule multiqc:
     input:
-        r1 = lambda wc: SAMPLES.loc[wc.sample, "fastq_1"],
-        r2 = lambda wc: SAMPLES.loc[wc.sample, "fastq_2"]
+        expand(os.path.join(RESULTS, "qc/fastqc_raw/{sample}_1_fastqc.zip"), sample=SAMPLE_IDS),
+        expand(os.path.join(RESULTS, "qc/fastp/{sample}.json"), sample=SAMPLE_IDS),
     output:
         os.path.join(RESULTS, "qc/fastqc_raw/{sample}_1_fastqc.html"),
         os.path.join(RESULTS, "qc/fastqc_raw/{sample}_1_fastqc.zip"),
