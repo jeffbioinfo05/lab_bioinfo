@@ -4,10 +4,10 @@ rule fastqc_raw:
         r1 = lambda wc: SAMPLES.loc[wc.sample, "fastq_1"],
         r2 = lambda wc: SAMPLES.loc[wc.sample, "fastq_2"]
     output:
-        os.path.join(RESULTS, "qc/fastqc_raw/{sample}_R1_fastqc.html"),
-        os.path.join(RESULTS, "qc/fastqc_raw/{sample}_R1_fastqc.zip"),
-        os.path.join(RESULTS, "qc/fastqc_raw/{sample}_R2_fastqc.html"),
-        os.path.join(RESULTS, "qc/fastqc_raw/{sample}_R2_fastqc.zip"),
+        os.path.join(RESULTS, "qc/fastqc_raw/{sample}_1_fastqc.html"),
+        os.path.join(RESULTS, "qc/fastqc_raw/{sample}_1_fastqc.zip"),
+        os.path.join(RESULTS, "qc/fastqc_raw/{sample}_2_fastqc.html"),
+        os.path.join(RESULTS, "qc/fastqc_raw/{sample}_2_fastqc.zip"),
     params: outdir = os.path.join(RESULTS, "qc/fastqc_raw")
     log:    os.path.join(LOGS, "fastqc_raw/{sample}.log")
     threads: THREADS
