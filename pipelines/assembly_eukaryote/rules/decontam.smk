@@ -1,11 +1,3 @@
-# decontam.smk — remoção de múltiplos hospedeiros em sequência
-# config.yaml:
-#   decontam:
-#     run: true
-#     hosts:
-#       - "/mnt/bioinfo/databases/genomes/human/GRCh38.fa"
-#       - "/mnt/bioinfo/databases/genomes/cat/Felis_catus.fna"
-
 def get_hosts():
     return config["decontam"].get("hosts", [])
 
@@ -22,11 +14,16 @@ if config["decontam"]["run"] and len(get_hosts()) > 0:
         params:
             hosts   = get_hosts(),
             tmp_dir = os.path.join(TMP, "decontam/{sample}"),
+            bindir  = os.path.expanduser("~/lab/software/envs/general/bin"),
         log:     os.path.join(LOGS, "decontam/{sample}.log")
         threads: THREADS_H
         conda:   os.path.expanduser("~/lab/software/envs/general")
         run:
-            import subprocess, os, gzip
+            import subprocess, os
+
+            # Garante que o PATH do env general está disponível para subprocessos
+            env = os.environ.copy()
+            env["PATH"] = params.bindir + ":" + env.get("PATH", "")
 
             os.makedirs(params.tmp_dir, exist_ok=True)
             os.makedirs(os.path.dirname(output.r1), exist_ok=True)
@@ -34,16 +31,18 @@ if config["decontam"]["run"] and len(get_hosts()) > 0:
 
             def count_reads(fastq_gz):
                 result = subprocess.run(
-                    ["bash", "-c", f"zcat {fastq_gz} | wc -l"],
-                    capture_output=True, text=True)
+                    f"zcat {fastq_gz} | wc -l",
+                    shell=True, capture_output=True, text=True, env=env)
                 return int(result.stdout.strip()) // 4
 
             current_r1 = input.r1
             current_r2 = input.r2
 
             initial = count_reads(current_r1)
-            report_rows = [("sample", "step", "reads", "removed", "removed_pct"),
-                           (wildcards.sample, "raw", initial, 0, "0.00")]
+            report_rows = [
+                ("sample", "step", "reads", "removed", "removed_pct"),
+                (wildcards.sample, "raw", initial, 0, "0.00")
+            ]
             prev = initial
 
             for i, host_ref in enumerate(params.hosts):
@@ -67,7 +66,7 @@ if config["decontam"]["run"] and len(get_hosts()) > 0:
                     f"-1 {out_r1} -2 {out_r2} "
                     f"-0 /dev/null -s /dev/null 2>>{log[0]}"
                 )
-                subprocess.run(cmd, shell=True, check=True)
+                subprocess.run(cmd, shell=True, check=True, env=env)
 
                 curr = count_reads(out_r1)
                 removed = prev - curr
@@ -78,8 +77,8 @@ if config["decontam"]["run"] and len(get_hosts()) > 0:
                 current_r2 = out_r2
                 prev = curr
 
-            subprocess.run(f"cp {current_r1} {output.r1}", shell=True, check=True)
-            subprocess.run(f"cp {current_r2} {output.r2}", shell=True, check=True)
+            subprocess.run(f"cp {current_r1} {output.r1}", shell=True, check=True, env=env)
+            subprocess.run(f"cp {current_r2} {output.r2}", shell=True, check=True, env=env)
 
             with open(output.report, "w") as f:
                 for row in report_rows:
