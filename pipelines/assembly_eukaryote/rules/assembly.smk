@@ -14,11 +14,14 @@ rule assembly:
         outdir = os.path.join(RESULTS, "assembly/{sample}"),
         gsize  = config["assembly"]["genome_size"],
         minlen = config["assembly"]["min_contig_len"],
+        bindir = os.path.expanduser("~/lab/software/envs/assembly_core/bin"),
     log:    os.path.join(LOGS, "assembly/{sample}.log")
     threads: THREADS_H
     conda:  os.path.expanduser("~/lab/software/envs/assembly_core")
     run:
         import subprocess, os
+        env = os.environ.copy()
+        env["PATH"] = params.bindir + ":" + env.get("PATH", "")
         os.makedirs(params.outdir, exist_ok=True)
         if TOOL == "spades":
             cmd = (f"spades.py -1 {input.r1} -2 {input.r2} "
@@ -32,4 +35,4 @@ rule assembly:
             cmd = (f"unicycler -1 {input.r1} -2 {input.r2} "
                    f"-o {params.outdir}/unicycler -t {threads} 2>{log} && "
                    f"cp {params.outdir}/unicycler/assembly.fasta {output.fasta}")
-        subprocess.run(cmd, shell=True, check=True)
+        subprocess.run(cmd, shell=True, check=True, env=env)

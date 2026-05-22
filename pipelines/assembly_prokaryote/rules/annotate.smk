@@ -1,7 +1,3 @@
-# Anotação estrutural: Bakta (env annotation)
-# Anotação funcional: EggNOG-mapper (env annotation)
-# Prokka removido — usar Bakta para todos os procariotos
-
 rule annotate:
     input:  os.path.join(RESULTS, "assembly/{sample}/assembly.fasta")
     output:
@@ -12,6 +8,7 @@ rule annotate:
         genus   = config["annotation"].get("genus", ""),
         species = config["annotation"].get("species", ""),
         db      = config["databases"]["bakta"],
+        bindir  = os.path.expanduser("~/lab/software/envs/annotation/bin"),
     log:    os.path.join(LOGS, "annotate/{sample}.log")
     threads: THREADS_H
     conda:  os.path.expanduser("~/lab/software/envs/annotation")
