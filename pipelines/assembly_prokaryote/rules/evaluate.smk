@@ -1,5 +1,3 @@
-CHECKM2_SIF = os.path.expanduser("~/lab/software/containers/checkm2.sif")
-
 rule quast:
     input:  os.path.join(RESULTS, "assembly/{sample}/assembly.fasta")
     output: os.path.join(RESULTS, "evaluate/quast/{sample}/report.tsv")
@@ -19,22 +17,35 @@ rule busco:
     log:    os.path.join(LOGS, "busco/{sample}.log")
     threads: THREADS
     conda:  os.path.expanduser("~/lab/software/envs/assembly_core")
-    shell:
-        "busco -i {input} -o {params.outdir} -l {params.lineage} "
-        "--offline --download_path {params.db} -m genome "
-        "-c {threads} --force > {log} 2>&1 && "
-        "cp {params.outdir}/short_summary*.txt {output}"
+    run:
+        import subprocess, glob, shutil, os
+        env = os.environ.copy()
+        env["PATH"] = os.path.expanduser("~/lab/software/envs/assembly_core/bin") + ":" + env.get("PATH","")
 
-rule checkm2:
-    input:  os.path.join(RESULTS, "assembly/{sample}/assembly.fasta")
-    output: os.path.join(RESULTS, "evaluate/checkm2/{sample}/quality_report.tsv")
-    params:
-        outdir  = os.path.join(RESULTS, "evaluate/checkm2/{sample}"),
-        db      = config["databases"]["checkm2"],
-    log:    os.path.join(LOGS, "checkm2/{sample}.log")
-    threads: THREADS_H
-    container: CHECKM2_SIF
-    shell:
-        "checkm2 predict --input {input} --output-directory {params.outdir} "
-        "--database_path {params.db}/uniref100.KO.1.dmnd "
-        "--threads {threads} --force > {log} 2>&1"
+        os.makedirs(params.outdir, exist_ok=True)
+
+        # cd / garante que o BUSCO 6 escreva no caminho absoluto correto
+        cmd = (
+            f"cd / && busco -i {input} -o {params.outdir} -l {params.lineage} "
+            f"--offline --download_path {params.db} -m genome "
+            f"-c {threads} --force > {log[0]} 2>&1"
+        )
+        subprocess.run(cmd, shell=True, check=True, env=env)
+
+        # BUSCO 6.x: short_summary.specific.<lineage>.<sample>.txt
+        patterns = [
+            os.path.join(params.outdir, "short_summary.specific.*.txt"),
+            os.path.join(params.outdir, "short_summary*.txt"),
+            os.path.join(params.outdir, "**", "short_summary*.txt"),
+        ]
+        found = []
+        for pat in patterns:
+            found.extend(glob.glob(pat, recursive=True))
+
+        if found:
+            shutil.copy(found[0], output[0])
+        else:
+            raise FileNotFoundError(
+                f"BUSCO não gerou short_summary em {params.outdir}. "
+                f"Verifique o log: {log[0]}"
+            )

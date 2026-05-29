@@ -17,8 +17,35 @@ rule busco:
     log:    os.path.join(LOGS, "busco/{sample}.log")
     threads: THREADS
     conda:  os.path.expanduser("~/lab/software/envs/assembly_core")
-    shell:
-        "busco -i {input} -o {params.outdir} -l {params.lineage} "
-        "--offline --download_path {params.db} -m genome "
-        "-c {threads} --force > {log} 2>&1 && "
-        "cp {params.outdir}/short_summary*.txt {output}"
+    run:
+        import subprocess, glob, shutil, os
+        env = os.environ.copy()
+        env["PATH"] = os.path.expanduser("~/lab/software/envs/assembly_core/bin") + ":" + env.get("PATH","")
+
+        os.makedirs(params.outdir, exist_ok=True)
+
+        # cd / garante que o BUSCO 6 escreva no caminho absoluto correto
+        cmd = (
+            f"cd / && busco -i {input} -o {params.outdir} -l {params.lineage} "
+            f"--offline --download_path {params.db} -m genome "
+            f"-c {threads} --force > {log[0]} 2>&1"
+        )
+        subprocess.run(cmd, shell=True, check=True, env=env)
+
+        # BUSCO 6.x: short_summary.specific.<lineage>.<sample>.txt
+        patterns = [
+            os.path.join(params.outdir, "short_summary.specific.*.txt"),
+            os.path.join(params.outdir, "short_summary*.txt"),
+            os.path.join(params.outdir, "**", "short_summary*.txt"),
+        ]
+        found = []
+        for pat in patterns:
+            found.extend(glob.glob(pat, recursive=True))
+
+        if found:
+            shutil.copy(found[0], output[0])
+        else:
+            raise FileNotFoundError(
+                f"BUSCO não gerou short_summary em {params.outdir}. "
+                f"Verifique o log: {log[0]}"
+            )
