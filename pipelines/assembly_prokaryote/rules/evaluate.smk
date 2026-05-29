@@ -14,6 +14,7 @@ rule busco:
         outdir  = os.path.join(RESULTS, "evaluate/busco/{sample}"),
         lineage = config["databases"]["busco_lineage"],
         db      = config["databases"]["busco"],
+        tmp_dir = os.path.join(TMP, "busco/{sample}"),
     log:    os.path.join(LOGS, "busco/{sample}.log")
     threads: THREADS
     conda:  os.path.expanduser("~/lab/software/envs/assembly_core")
@@ -23,10 +24,13 @@ rule busco:
         env["PATH"] = os.path.expanduser("~/lab/software/envs/assembly_core/bin") + ":" + env.get("PATH","")
 
         os.makedirs(params.outdir, exist_ok=True)
+        os.makedirs(params.tmp_dir, exist_ok=True)
 
-        # cd / garante que o BUSCO 6 escreva no caminho absoluto correto
+        # Roda a partir de um diretório temporário com permissão de escrita
+        # --out_path força o BUSCO 6 a escrever no caminho absoluto correto
         cmd = (
-            f"cd / && busco -i {input} -o {params.outdir} -l {params.lineage} "
+            f"cd {params.tmp_dir} && "
+            f"busco -i {input} -o {params.outdir} -l {params.lineage} "
             f"--offline --download_path {params.db} -m genome "
             f"-c {threads} --force > {log[0]} 2>&1"
         )
@@ -47,5 +51,5 @@ rule busco:
         else:
             raise FileNotFoundError(
                 f"BUSCO não gerou short_summary em {params.outdir}. "
-                f"Verifique o log: {log[0]}"
+                f"Verifique: {log[0]}"
             )
