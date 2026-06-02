@@ -21,7 +21,6 @@ if config["decontam"]["run"] and len(get_hosts()) > 0:
         run:
             import subprocess, os
 
-            # Garante que o PATH do env general está disponível para subprocessos
             env = os.environ.copy()
             env["PATH"] = params.bindir + ":" + env.get("PATH", "")
 
@@ -64,9 +63,17 @@ if config["decontam"]["run"] and len(get_hosts()) > 0:
                     f"samtools sort -n -@ {threads} {bam} 2>>{log[0]} | "
                     f"samtools fastq "
                     f"-1 {out_r1} -2 {out_r2} "
-                    f"-0 /dev/null -s /dev/null 2>>{log[0]}"
+                    f"-0 /dev/null -s /dev/null 2>>{log[0]} && "
+                    f"rm -f {bam}"   # remove BAM imediatamente após uso
                 )
                 subprocess.run(cmd, shell=True, check=True, env=env)
+
+                # Remove FASTQs do passo anterior para liberar espaço
+                if i > 0:
+                    prev_r1 = os.path.join(params.tmp_dir, f"step{i}_R1.fastq.gz")
+                    prev_r2 = os.path.join(params.tmp_dir, f"step{i}_R2.fastq.gz")
+                    for f in [prev_r1, prev_r2]:
+                        if os.path.exists(f): os.remove(f)
 
                 curr = count_reads(out_r1)
                 removed = prev - curr
@@ -79,6 +86,20 @@ if config["decontam"]["run"] and len(get_hosts()) > 0:
 
             subprocess.run(f"cp {current_r1} {output.r1}", shell=True, check=True, env=env)
             subprocess.run(f"cp {current_r2} {output.r2}", shell=True, check=True, env=env)
+
+            # Remove último step intermediário e os trimmed de input
+            for f in [current_r1, current_r2]:
+                if os.path.exists(f) and f != output.r1 and f != output.r2:
+                    os.remove(f)
+
+            # Remove os trimmed após decontam bem-sucedido
+            for f in [input.r1, input.r2]:
+                if os.path.exists(f):
+                    os.remove(f)
+
+            # Remove dir tmp da amostra
+            import shutil
+            shutil.rmtree(params.tmp_dir, ignore_errors=True)
 
             with open(output.report, "w") as f:
                 for row in report_rows:
